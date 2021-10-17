@@ -122,7 +122,8 @@ class RabbitMQQueue extends Queue implements QueueContract
      */
     public function push($job, $data = '', $queue = null)
     {
-        return $this->pushRaw($this->createPayload($job, $queue, $data), $queue, []);
+        $options = $job->options ?? [];
+        return $this->pushRaw($this->createPayload($job, $queue, $data), $queue, $options);
     }
 
     /**
