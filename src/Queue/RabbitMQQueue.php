@@ -6,6 +6,7 @@ namespace VladimirYuldashev\LaravelQueueRabbitMQ\Queue;
 
 use ErrorException;
 use Exception;
+use Illuminate\Broadcasting\BroadcastEvent;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue;
 use Illuminate\Support\Arr;
