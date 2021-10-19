@@ -7,6 +7,7 @@ namespace VladimirYuldashev\LaravelQueueRabbitMQ\Queue;
 use ErrorException;
 use Exception;
 use Illuminate\Broadcasting\BroadcastEvent;
+use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
 use Illuminate\Queue\Queue;
 use Illuminate\Support\Arr;
@@ -422,6 +423,73 @@ class RabbitMQQueue extends Queue implements QueueContract
 
             throw $exception;
         }
+    }
+
+    /**
+     * Create a payload for an object-based queue handler.
+     *
+     * @param  object  $job
+     * @param  string  $queue
+     * @return array
+     */
+    protected function createObjectPayload($job, $queue)
+    {
+        $payload = $this->withCreatePayloadHooks($queue, [
+            'uuid' => (string) Str::uuid(),
+            'displayName' => $this->getDisplayName($job),
+            'job' => 'Illuminate\Queue\CallQueuedHandler@call',
+            'schema' => $this->getSchema($job) ?? null,
+            'busEvent' => $this->getBusEvent($job) ?? null,
+            'maxTries' => $job->tries ?? null,
+            'maxExceptions' => $job->maxExceptions ?? null,
+            'failOnTimeout' => $job->failOnTimeout ?? false,
+            'backoff' => $this->getJobBackoff($job),
+            'timeout' => $job->timeout ?? null,
+            'retryUntil' => $this->getJobExpiration($job),
+            'data' => [
+                'commandName' => $job,
+                'command' => $job,
+            ],
+        ]);
+
+        $command = $this->jobShouldBeEncrypted($job) && $this->container->bound(Encrypter::class)
+            ? $this->container[Encrypter::class]->encrypt(serialize(clone $job))
+            : serialize(clone $job);
+
+        return array_merge($payload, [
+            'data' => array_merge($payload['data'], [
+                'commandName' => get_class($job),
+                'command' => $command,
+            ]),
+        ]);
+    }
+
+    /**
+     * Get the schema for the given job.
+     *
+     * @param  object  $job
+     */
+    protected function getSchema($job): ?string
+    {
+        if (method_exists($job, 'displayName') && isset($job->event)) {
+            return $job->event->schema ?? null;
+        }
+
+        return $job->schema ?? null;
+    }
+
+    /**
+     * Get the bus event for the given job.
+     *
+     * @param  object  $job
+     */
+    protected function getBusEvent($job): ?string
+    {
+        if (method_exists($job, 'displayName') && isset($job->event)) {
+            return $job->event->busEvent ?? null;
+        }
+
+        return $job->busEvent ?? null;
     }
 
     /**
