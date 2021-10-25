@@ -440,6 +440,7 @@ class RabbitMQQueue extends Queue implements QueueContract
             'job' => 'Illuminate\Queue\CallQueuedHandler@call',
             'schema' => $this->getSchema($job) ?? null,
             'busEvent' => $this->getBusEvent($job) ?? null,
+            'payload' => $this->getJobPayload($job) ?? null,
             'maxTries' => $job->tries ?? null,
             'maxExceptions' => $job->maxExceptions ?? null,
             'failOnTimeout' => $job->failOnTimeout ?? false,
@@ -465,7 +466,7 @@ class RabbitMQQueue extends Queue implements QueueContract
     }
 
     /**
-     * Get the schema for the given job.
+     * Get the display name for the given job.
      *
      * @param  object  $job
      */
@@ -479,7 +480,7 @@ class RabbitMQQueue extends Queue implements QueueContract
     }
 
     /**
-     * Get the bus event for the given job.
+     * Get the display name for the given job.
      *
      * @param  object  $job
      */
@@ -490,6 +491,20 @@ class RabbitMQQueue extends Queue implements QueueContract
         }
 
         return $job->busEvent ?? null;
+    }
+
+    /**
+     * Get the display name for the given job.
+     *
+     * @param  object  $job
+     */
+    protected function getJobPayload($job): ?string
+    {
+        if (method_exists($job, 'displayName') && isset($job->event) && isset($job->event->payload)) {
+            return serialize($job->event->payload) ?? null;
+        }
+
+        return isset($job->payload) ? serialize($job->payload) : null;
     }
 
     /**
